@@ -1,0 +1,29 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/jchapa30/splunk-log-ingestion-pipeline.git'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'python3 ingestion/send_logs.py'
+            }
+        }
+
+        stage('Deploy Dashboard') {
+            steps {
+                httpRequest(
+                    url: "https://127.0.0.1:8000/.splunkcloud.com/servicesNS/admin/search/data/ui/views/log_monitor_dashboard",
+                    httpMode: 'POST',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: readFile('dashboard/log_monitor_dashboard.json'),
+                    customHeaders: [[name: 'Authorization', value: 'Bearer <your-hec-token>']]
+                )
+            }
+        }
+    }
+}
