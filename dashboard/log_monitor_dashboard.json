@@ -1,0 +1,18 @@
+{
+    "dashboard": {
+        "title": "Log Monitoring Dashboard",
+        "description": "Real-time view of ingested logs",
+        "visualizations": [
+            {
+                "type": "table",
+                "query": "search sourcetype=_json | stats count by status",
+                "title": "Login Status Summary"
+            },
+            {
+                "type": "timechart",
+                "query": "search sourcetype=_json | timechart count by status",
+                "title": "Login Attempts Over Time"
+            }
+        ]
+    }
+}
