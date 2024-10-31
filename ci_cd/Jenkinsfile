@@ -1,6 +1,14 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'SPLUNK_URL', defaultValue: 'http://127.0.0.1:8088/services/collector.splunkcloud.com', description: 'URL of the Splunk instance')
+    }
+
+    environment {
+        SPLUNK_INSTANCE = "${params.SPLUNK_URL}"
+    }
+
     stages {
         stage('Clone Repository') {
             steps {
@@ -16,14 +24,32 @@ pipeline {
 
         stage('Deploy Dashboard') {
             steps {
-                httpRequest(
-                    url: "https://127.0.0.1:8000/.splunkcloud.com/servicesNS/admin/search/data/ui/views/log_monitor_dashboard",
-                    httpMode: 'POST',
-                    contentType: 'APPLICATION_JSON',
-                    requestBody: readFile('dashboard/log_monitor_dashboard.json'),
-                    customHeaders: [[name: 'Authorization', value: 'Bearer <your-hec-token>']]
-                )
+                script {
+                    withCredentials([string(credentialsId: 'SPLUNK_HEC_TOKEN', variable: 'HEC_TOKEN')]) {
+                        def response = httpRequest(
+                            url: "${SPLUNK_INSTANCE}/servicesNS/admin/search/data/ui/views/log_monitor_dashboard",
+                            httpMode: 'POST',
+                            contentType: 'APPLICATION_JSON',
+                            requestBody: readFile('dashboard/log_monitor_dashboard.json'),
+                            customHeaders: [[name: 'Authorization', value: "Bearer ${HEC_TOKEN}"]]
+                        )
+                        echo "Response: ${response}"
+                    }
+                }
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+        always {
+            echo 'Cleaning up workspace...'
+            cleanWs()
         }
     }
 }
